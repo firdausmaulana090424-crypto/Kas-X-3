@@ -5,9 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kas Kelas X-3 - Ultimate Edition</title>
     
-    <link rel="manifest" href="data:application/manifest+json,{"name":"Kas X-3","short_name":"KasX3","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#2563eb"}">
+    <link rel="manifest" href='data:application/manifest+json,{
+      "name": "Kas X-3 Professional",
+      "short_name": "KasX3",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#ffffff",
+      "theme_color": "#2563eb",
+      "icons": [
+        {
+          "src": "https://lh3.googleusercontent.com/u/0/d/1cjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4Bcjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4B",
+          "sizes": "192x192",
+          "type": "image/jpeg"
+        },
+        {
+          "src": "https://lh3.googleusercontent.com/u/0/d/1cjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4Bcjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4B",
+          "sizes": "512x512",
+          "type": "image/jpeg"
+        }
+      ]
+    }'>
+    
+    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/u/0/d/1cjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4Bcjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4B">
+    <link rel="icon" type="image/jpeg" href="https://lh3.googleusercontent.com/u/0/d/1cjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4Bcjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4B">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,7 +37,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
-        // Konfigurasi Tailwind untuk Dark Mode
         tailwind.config = { darkMode: 'class' }
     </script>
 
@@ -33,7 +54,7 @@
     <div class="max-w-6xl mx-auto">
         <div class="bg-blue-600 text-white p-3 rounded-2xl mb-6 flex items-center gap-3 shadow-lg shadow-blue-200">
             <span class="animate-bounce">📢</span>
-            <marquee class="font-bold text-sm">Info: Pembayaran uang kas bulan Februari ditutup tanggal 25! Silakan hubungi Bendahara.</marquee>
+            <marquee class="font-bold text-sm">Info: Pembayaran uang kas bulan Februari ditutup tanggal 25! Segera lapor ke Bendahara.</marquee>
         </div>
 
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -68,9 +89,9 @@
             </div>
             
             <div class="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-black uppercase mb-1">Total Saldo</p>
-                <h2 id="totalSaldo" class="text-4xl font-black text-white tracking-tight mb-4">Rp 0</h2>
-                <div id="healthLabel" class="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mb-4 w-fit">Menganalisis...</div>
+                <p class="text-[10px] text-slate-500 font-black uppercase mb-1 text-center lg:text-left">Total Saldo</p>
+                <h2 id="totalSaldo" class="text-4xl font-black text-white tracking-tight mb-4 text-center lg:text-left">Rp 0</h2>
+                <div id="healthLabel" class="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mb-4 w-fit mx-auto lg:mx-0">Menganalisis...</div>
                 <button onclick="backupData()" class="w-full py-2 bg-slate-800 text-[9px] font-bold rounded-xl border border-slate-700 hover:bg-slate-700 transition">💾 BACKUP JSON</button>
             </div>
         </div>
@@ -110,8 +131,8 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h3 class="font-bold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-widest">Riwayat Kas</h3>
                     <div class="flex gap-2">
-                        <button onclick="unduhPDF()" class="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[9px] border border-red-100 hover:bg-red-600 hover:text-white transition">PDF</button>
-                        <button onclick="exportExcel()" class="px-3 py-2 bg-green-50 text-green-600 rounded-xl font-black text-[9px] border border-green-100 hover:bg-green-600 hover:text-white transition">EXCEL</button>
+                        <button onclick="unduhPDF()" class="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[10px] border border-red-100 hover:bg-red-600 hover:text-white transition">PDF</button>
+                        <button onclick="exportExcel()" class="px-3 py-2 bg-green-50 text-green-600 rounded-xl font-black text-[10px] border border-green-100 hover:bg-green-600 hover:text-white transition">EXCEL</button>
                     </div>
                 </div>
 
@@ -140,13 +161,11 @@
         const ADMIN_PIN = "0101"; 
         let dataLokal = [], listAnggota = [], lineChart;
 
-        // FITUR 1: DARK MODE
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
             localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         }
 
-        // FITUR 2: EXPORT EXCEL
         function exportExcel() {
             let csv = "Tanggal,Nama,Keterangan,Jumlah,Tipe\n";
             dataLokal.forEach(r => { csv += `${new Date(r[0]).toLocaleDateString()},${r[1]},${r[2]},${r[3]},${r[4]}\n`; });
@@ -155,26 +174,21 @@
             const a = document.createElement('a'); a.href = url; a.download = 'Laporan_Kas_X3.csv'; a.click();
         }
 
-        // FITUR 3: BACKUP JSON
         function backupData() {
             const blob = new Blob([JSON.stringify(dataLokal)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Backup_Kas_X3_${new Date().toLocaleDateString()}.json`; a.click();
-            alert("Backup data berhasil diunduh!");
+            const a = document.createElement('a'); a.href = url; a.download = `Backup_Kas_X3.json`; a.click();
         }
 
-        // FITUR 4: SALIN PENUNGGAK
         function salinPenunggak() {
             const bln = new Date().getMonth();
             const nunggak = listAnggota.filter(nama => !dataLokal.some(t => t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && new Date(t[0]).getMonth() === bln));
             const teks = `🚨 INFO KAS X-3: Belum bayar bulan ini:\n${nunggak.map((n, i) => `${i+1}. ${n}`).join('\n')}\nMohon segera dilunasi!`;
-            navigator.clipboard.writeText(teks); alert("Daftar penunggak disalin ke clipboard!");
+            navigator.clipboard.writeText(teks); alert("Daftar disalin!");
         }
 
-        // CLOCK
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString('id-ID', {dateStyle: 'medium', timeStyle: 'short'}); }, 1000);
 
-        // DATA LOADER
         async function muatData() {
             try {
                 const res = await fetch(scriptURL);
@@ -187,7 +201,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // FILTER LOGIC
         function filterData() {
             const nama = document.getElementById('filterNama').value.toLowerCase();
             const bulan = document.getElementById('filterBulan').value;
@@ -242,20 +255,14 @@
             `).join('');
         }
 
-        // SUBMIT FORM
         document.getElementById('kasForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             if(document.getElementById('inputPin').value !== ADMIN_PIN) { alert("PIN SALAH!"); return; }
-            
             const nama = document.getElementById('nama').value;
             const kat = document.getElementById('kategori').value;
             const jml = document.getElementById('jumlah').value;
             const tipe = document.getElementById('tipe').value;
             const ketFull = `[${kat}] ` + document.getElementById('keterangan').value;
-
-            // ANTI-DOUBLE ENTRY
-            const isDup = dataLokal.some(t => t[1] === nama && t[2] === ketFull && t[3].toString() === jml);
-            if(isDup && !confirm("Data identik ditemukan. Tetap simpan?")) return;
 
             document.getElementById('btnSimpan').innerText = "MENYIMPAN...";
             try {
