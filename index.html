@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kas Kelas X-3 - Ultimate Edition</title>
+    
+    <link rel="manifest" href="data:application/manifest+json,{"name":"Kas X-3","short_name":"KasX3","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#2563eb"}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // Konfigurasi Tailwind untuk Dark Mode
+        tailwind.config = { darkMode: 'class' }
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark .bg-white { background-color: #1e293b; color: white; }
+        .dark .bg-slate-50 { background-color: #0f172a; }
+        .dark .border-slate-100 { border-color: #334155; }
+        .dark .text-slate-800 { color: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 p-4 md:p-8 font-sans transition-colors duration-300">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-blue-600 text-white p-3 rounded-2xl mb-6 flex items-center gap-3 shadow-lg shadow-blue-200">
+            <span class="animate-bounce">📢</span>
+            <marquee class="font-bold text-sm">Info: Pembayaran uang kas bulan Februari ditutup tanggal 25! Silakan hubungi Bendahara.</marquee>
+        </div>
+
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div class="flex items-center gap-4">
+                <img src="https://lh3.googleusercontent.com/u/0/d/1cjj2U8ReYQX_7_TWBSzDwTcgQ2DJXh4B" alt="Logo" class="h-14 w-14 object-contain rounded-2xl shadow-md border-2 border-white dark:border-slate-700">
+                <div>
+                    <h1 class="text-3xl font-black text-slate-800 dark:text-white italic uppercase">KAS KELAS <span class="text-blue-600">X-3</span></h1>
+                    <p id="clock" class="text-slate-500 text-[10px] font-bold tracking-widest uppercase"></p>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="toggleDarkMode()" class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:scale-105 transition">🌙</button>
+                <button onclick="salinPenunggak()" class="px-4 bg-green-600 text-white rounded-2xl text-[10px] font-black hover:bg-green-700 uppercase shadow-lg">📋 Salin</button>
+                
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-blue-100 dark:border-slate-700 flex items-center gap-4">
+                    <div class="text-right border-r pr-4 border-slate-100 dark:border-slate-700">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Target</p>
+                        <p id="targetTagihan" class="text-lg font-black text-blue-600">Rp 0</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Piutang</p>
+                        <p id="sisaPiutang" class="text-lg font-black text-red-500">Rp 0</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                <canvas id="lineChart" class="h-40"></canvas>
+            </div>
+            
+            <div class="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white flex flex-col justify-center">
+                <p class="text-[10px] text-slate-500 font-black uppercase mb-1">Total Saldo</p>
+                <h2 id="totalSaldo" class="text-4xl font-black text-white tracking-tight mb-4">Rp 0</h2>
+                <div id="healthLabel" class="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mb-4 w-fit">Menganalisis...</div>
+                <button onclick="backupData()" class="w-full py-2 bg-slate-800 text-[9px] font-bold rounded-xl border border-slate-700 hover:bg-slate-700 transition">💾 BACKUP JSON</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                    <h3 class="font-bold mb-6 text-slate-700 dark:text-slate-300 uppercase text-xs tracking-widest">Input Transaksi</h3>
+                    <form id="kasForm" class="space-y-4">
+                        <input type="password" id="inputPin" class="w-full p-4 bg-slate-100 dark:bg-slate-700 border-none rounded-2xl text-center font-black tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none dark:text-white" placeholder="PIN ADMIN">
+                        
+                        <input type="text" id="nama" list="listAnggotaSuggest" class="w-full p-4 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold dark:text-white" placeholder="Nama Anggota" required>
+                        <datalist id="listAnggotaSuggest"></datalist>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="tipe" class="p-4 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold text-xs dark:text-white">
+                                <option value="Masuk">Masuk (+)</option>
+                                <option value="Keluar">Keluar (-)</option>
+                            </select>
+                            <select id="kategori" class="p-4 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold text-xs dark:text-white">
+                                <option value="Iuran">Iuran</option>
+                                <option value="Konsumsi">Konsumsi</option>
+                                <option value="Sosial">Sosial</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <input type="text" id="keterangan" class="w-full p-4 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none dark:text-white" placeholder="Keterangan Detail..." required>
+                        <input type="number" id="jumlah" class="w-full p-4 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black text-blue-600" placeholder="Nominal Rp" required>
+                        
+                        <button type="submit" id="btnSimpan" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl hover:bg-blue-700 transition shadow-lg uppercase tracking-widest text-sm">Simpan Transaksi</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-widest">Riwayat Kas</h3>
+                    <div class="flex gap-2">
+                        <button onclick="unduhPDF()" class="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[9px] border border-red-100 hover:bg-red-600 hover:text-white transition">PDF</button>
+                        <button onclick="exportExcel()" class="px-3 py-2 bg-green-50 text-green-600 rounded-xl font-black text-[9px] border border-green-100 hover:bg-green-600 hover:text-white transition">EXCEL</button>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <select id="filterBulan" onchange="filterData()" class="flex-1 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-bold dark:text-white">
+                        <option value="all">SEMUA BULAN</option>
+                        <option value="0">JANUARI</option><option value="1">FEBRUARI</option><option value="2">MARET</option>
+                        <option value="3">APRIL</option><option value="4">MEI</option><option value="5">JUNI</option>
+                        <option value="6">JULI</option><option value="7">AGUSTUS</option><option value="8">SEPTEMBER</option>
+                        <option value="9">OKTOBER</option><option value="10">NOVEMBER</option><option value="11">DESEMBER</option>
+                    </select>
+                    <input type="text" id="filterNama" onkeyup="filterData()" placeholder="🔍 Cari nama..." class="flex-[2] p-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-bold dark:text-white">
+                </div>
+
+                <div class="overflow-y-auto max-h-[350px] custom-scrollbar">
+                    <table class="w-full text-left">
+                        <tbody id="tabelBody" class="divide-y divide-slate-50 dark:divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyp5G8MfetdeTjPjT-xwwA7Y-cZq481SnnwjqhO08o52GyL4qQCNyvj0I92Dsp0rMJd/exec'; 
+        const ADMIN_PIN = "0101"; 
+        let dataLokal = [], listAnggota = [], lineChart;
+
+        // FITUR 1: DARK MODE
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+
+        // FITUR 2: EXPORT EXCEL
+        function exportExcel() {
+            let csv = "Tanggal,Nama,Keterangan,Jumlah,Tipe\n";
+            dataLokal.forEach(r => { csv += `${new Date(r[0]).toLocaleDateString()},${r[1]},${r[2]},${r[3]},${r[4]}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'Laporan_Kas_X3.csv'; a.click();
+        }
+
+        // FITUR 3: BACKUP JSON
+        function backupData() {
+            const blob = new Blob([JSON.stringify(dataLokal)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `Backup_Kas_X3_${new Date().toLocaleDateString()}.json`; a.click();
+            alert("Backup data berhasil diunduh!");
+        }
+
+        // FITUR 4: SALIN PENUNGGAK
+        function salinPenunggak() {
+            const bln = new Date().getMonth();
+            const nunggak = listAnggota.filter(nama => !dataLokal.some(t => t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && new Date(t[0]).getMonth() === bln));
+            const teks = `🚨 INFO KAS X-3: Belum bayar bulan ini:\n${nunggak.map((n, i) => `${i+1}. ${n}`).join('\n')}\nMohon segera dilunasi!`;
+            navigator.clipboard.writeText(teks); alert("Daftar penunggak disalin ke clipboard!");
+        }
+
+        // CLOCK
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString('id-ID', {dateStyle: 'medium', timeStyle: 'short'}); }, 1000);
+
+        // DATA LOADER
+        async function muatData() {
+            try {
+                const res = await fetch(scriptURL);
+                const json = await res.json();
+                dataLokal = json.transaksi.filter(r => r[1] !== "" && !isNaN(parseInt(r[3])));
+                listAnggota = json.anggota;
+                document.getElementById('listAnggotaSuggest').innerHTML = listAnggota.map(n => `<option value="${n}">`).join('');
+                updateDashboard(dataLokal);
+                filterData();
+            } catch (e) { console.error(e); }
+        }
+
+        // FILTER LOGIC
+        function filterData() {
+            const nama = document.getElementById('filterNama').value.toLowerCase();
+            const bulan = document.getElementById('filterBulan').value;
+            let filtered = dataLokal;
+            if(nama !== "") filtered = filtered.filter(t => t[1].toLowerCase().includes(nama));
+            if(bulan !== "all") filtered = filtered.filter(t => new Date(t[0]).getMonth().toString() === bulan);
+            renderTabel(filtered.slice().reverse());
+        }
+
+        function updateDashboard(data) {
+            let mTotal = 0, kTotal = 0, currentSaldo = 0, saldoArr = [], labelArr = [];
+            data.forEach(r => {
+                const jml = parseInt(r[3]);
+                if(r[4] === 'Masuk') { mTotal += jml; currentSaldo += jml; }
+                else { kTotal += jml; currentSaldo -= jml; }
+                saldoArr.push(currentSaldo);
+                labelArr.push(new Date(r[0]).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit'}));
+            });
+            const sld = mTotal - kTotal;
+            document.getElementById('totalSaldo').innerText = "Rp " + sld.toLocaleString();
+            document.getElementById('targetTagihan').innerText = "Rp " + (listAnggota.length * 10000).toLocaleString();
+            document.getElementById('sisaPiutang').innerText = "Rp " + ((listAnggota.length * 10000) - mTotal).toLocaleString();
+            
+            const h = document.getElementById('healthLabel');
+            h.innerText = sld < 50000 ? "🚨 WASPADA" : "🟢 AMAN";
+            h.className = `inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mb-2 w-fit ${sld < 50000 ? 'bg-red-600' : 'bg-green-600'}`;
+            
+            renderCharts(labelArr.slice(-10), saldoArr.slice(-10));
+        }
+
+        function renderCharts(labels, values) {
+            const ctxLine = document.getElementById('lineChart').getContext('2d');
+            if(lineChart) lineChart.destroy();
+            lineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: { labels, datasets: [{ data: values, borderColor: '#2563eb', tension: 0.4, fill: true, backgroundColor: 'rgba(37, 99, 235, 0.05)' }] },
+                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+            });
+        }
+
+        function renderTabel(data) {
+            document.getElementById('tabelBody').innerHTML = data.map(r => `
+                <tr class="border-b border-slate-50 dark:border-slate-700">
+                    <td class="py-4">
+                        <div class="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">${r[1]}</div>
+                        <div class="text-[8px] text-slate-400 font-bold uppercase">${r[2]}</div>
+                    </td>
+                    <td class="text-right py-4 font-black ${r[4]==='Masuk'?'text-green-600':'text-red-600'}">
+                        ${r[4]==='Masuk'?'+':'-'} ${parseInt(r[3]).toLocaleString()}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // SUBMIT FORM
+        document.getElementById('kasForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(document.getElementById('inputPin').value !== ADMIN_PIN) { alert("PIN SALAH!"); return; }
+            
+            const nama = document.getElementById('nama').value;
+            const kat = document.getElementById('kategori').value;
+            const jml = document.getElementById('jumlah').value;
+            const tipe = document.getElementById('tipe').value;
+            const ketFull = `[${kat}] ` + document.getElementById('keterangan').value;
+
+            // ANTI-DOUBLE ENTRY
+            const isDup = dataLokal.some(t => t[1] === nama && t[2] === ketFull && t[3].toString() === jml);
+            if(isDup && !confirm("Data identik ditemukan. Tetap simpan?")) return;
+
+            document.getElementById('btnSimpan').innerText = "MENYIMPAN...";
+            try {
+                await fetch(scriptURL, { method: 'POST', body: JSON.stringify({nama, keterangan: ketFull, jumlah: jml, tipe}) });
+                document.getElementById('kasForm').reset();
+                muatData();
+            } catch (err) { alert("Gagal Simpan!"); }
+            finally { document.getElementById('btnSimpan').innerText = "Simpan Transaksi"; }
+        });
+
+        function unduhPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.text("LAPORAN KAS KELAS X-3", 14, 20);
+            doc.autoTable({ startY: 30, head: [['TGL', 'NAMA', 'KET', 'RP']], body: dataLokal.map(r => [new Date(r[0]).toLocaleDateString(), r[1], r[2], r[3]]) });
+            doc.save("Laporan_Kas_X3.pdf");
+        }
+
+        muatData();
+    </script>
+</body>
+</html>
