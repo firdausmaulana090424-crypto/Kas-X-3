@@ -44,11 +44,13 @@
                 <img src="logo.jpg" alt="Logo" class="h-14 w-14 object-contain rounded-2xl shadow-md border-2 border-white">
                 <div>
                     <h1 class="text-3xl font-black italic uppercase leading-none">UANG KAS <span class="text-blue-600">KELAS X-3</span></h1>
-                    <p id="infoBulan" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sinkronisasi...</p>
+                    <p id="realtimeClock" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic"></p>
+                    <p id="infoBulan" class="text-[9px] font-bold text-blue-400 uppercase tracking-widest mt-0.5 italic">Sinkronisasi...</p>
                 </div>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex gap-2 items-center">
+                <button onclick="kurangiBulan()" class="p-3 bg-white text-red-500 rounded-2xl shadow-sm border hover:bg-red-50 transition text-[10px] font-bold uppercase italic">➖ Kurangi</button>
                 <div class="bg-white p-3 rounded-2xl shadow-sm border flex items-center gap-3">
                     <div class="text-right">
                         <p class="text-[9px] font-black text-slate-400 uppercase">Tambah Tagihan</p>
@@ -94,8 +96,11 @@
                     <h3 class="text-xs font-black uppercase mb-6 text-slate-400 tracking-widest italic">Input Transaksi</h3>
                     <form id="kasForm" class="space-y-4">
                         <input type="password" id="inputPin" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-center font-black tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none" placeholder="PIN ADMIN">
-                        <input type="text" id="nama" list="listAnggota" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase" placeholder="Nama Siswa" required>
-                        <datalist id="listAnggota"></datalist>
+                        
+                        <div class="relative">
+                            <input type="text" id="nama" list="listAnggota" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase" placeholder="Nama Siswa" required autocomplete="off">
+                            <datalist id="listAnggota"></datalist>
+                        </div>
                         
                         <div class="grid grid-cols-2 gap-2">
                             <select id="tipe" class="p-4 border rounded-2xl font-bold text-xs outline-none">
@@ -105,6 +110,7 @@
                             <select id="kategori" class="p-4 border rounded-2xl font-bold text-xs outline-none">
                                 <option value="Iuran">Iuran</option>
                                 <option value="Sosial">Sosial</option>
+                                <option value="Alat Kelas">Alat Kelas</option>
                                 <option value="Lainnya">Lainnya</option>
                             </select>
                         </div>
@@ -115,16 +121,24 @@
                         <button type="submit" id="btnSimpan" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl hover:bg-blue-700 transition shadow-lg uppercase text-sm tracking-widest italic">Simpan Data</button>
                     </form>
                 </div>
+
+                <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
+                    <h3 class="text-xs font-black uppercase mb-4 text-slate-400 tracking-widest italic">Ringkasan Pengeluaran</h3>
+                    <div id="ringkasanKategori" class="space-y-3"></div>
+                </div>
             </div>
 
             <div class="lg:col-span-3 bg-white p-8 rounded-[2rem] border shadow-sm">
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h3 class="text-xs font-black uppercase text-slate-400 tracking-widest italic">Riwayat Transaksi</h3>
-                    <button onclick="unduhPDF()" class="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[10px] border border-red-100 hover:bg-red-600 hover:text-white transition uppercase">Cetak PDF</button>
+                    <div class="flex gap-2">
+                        <button onclick="unduhCSV()" class="px-4 py-2 bg-green-50 text-green-600 rounded-xl font-black text-[10px] border border-green-100 hover:bg-green-600 hover:text-white transition uppercase">Export Excel (CSV)</button>
+                        <button onclick="unduhPDF()" class="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[10px] border border-red-100 hover:bg-red-600 hover:text-white transition uppercase">Cetak PDF</button>
+                    </div>
                 </div>
-                <div class="overflow-y-auto max-h-[450px] custom-scrollbar">
+                <div class="overflow-y-auto max-h-[600px] custom-scrollbar">
                     <table class="w-full text-left">
-                        <tbody id="tabelBody" class="divide-y divide-slate-50"></tbody>
+                        <tbody id="tabelBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
@@ -136,9 +150,12 @@
             <div class="p-8 border-b flex justify-between items-center bg-slate-50 sticky top-0 z-10">
                 <div>
                     <h3 class="font-black text-xl uppercase italic">Laporan <span class="text-blue-600">Tunggakan</span></h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target: <span id="targetIndividuText">Rp 0</span> / Siswa</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sistem Tagihan: <span id="labelTagihan">0</span> Bulan</p>
                 </div>
-                <button onclick="tutupLaporan()" class="text-slate-400 hover:text-red-500 font-bold text-2xl">✕</button>
+                <div class="flex gap-2">
+                    <button onclick="copyPenunggak()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 transition">📋 Salin Penunggak</button>
+                    <button onclick="tutupLaporan()" class="text-slate-400 hover:text-red-500 font-bold text-2xl">✕</button>
+                </div>
             </div>
             <div class="p-4">
                 <table class="w-full text-left">
@@ -156,13 +173,21 @@
     </div>
 
     <script>
-        // MASUKKAN URL GOOGLE SCRIPT ANDA DI SINI
         const scriptURL = 'https://script.google.com/macros/s/AKfycbw5bKSsf6LiD2d_QkAHjC-E1VhJgD9qTsZtA0A8fZLDKE00r4fCfz-e-gZhw6_-iXua/exec';
         const ADMIN_PIN = "0101";
         const NOMINAL_IURAN = 10000;
         
         let dataLokal = [], listSiswa = [], myChart;
+        // ANTI-REFRESH: Mengambil data bulanAktif dari localStorage
         let bulanAktif = localStorage.getItem('bulanAktif') ? parseInt(localStorage.getItem('bulanAktif')) : 0;
+
+        function updateRealtimeClock() {
+            const now = new Date();
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('realtimeClock').innerText = now.toLocaleDateString('id-ID', options);
+        }
+        setInterval(updateRealtimeClock, 1000);
+        updateRealtimeClock();
 
         async function muatData() {
             document.getElementById('infoBulan').innerText = "MENYINGKRONKAN...";
@@ -172,12 +197,11 @@
                 const json = await res.json();
                 dataLokal = json.transaksi || [];
                 listSiswa = json.anggota || [];
-                
                 document.getElementById('listAnggota').innerHTML = listSiswa.map(n => `<option value="${n}">`).join('');
                 updateUI();
             } catch (e) {
-                alert("Gagal memuat data! Periksa koneksi atau URL Script.");
-                document.getElementById('infoBulan').innerText = "GAGAL KONEKSI";
+                alert("Koneksi Gagal. Periksa internet Anda.");
+                document.getElementById('infoBulan').innerText = "OFFLINE";
             }
         }
 
@@ -190,35 +214,60 @@
             setTimeout(() => { document.getElementById('btnSaklar').checked = false; }, 500);
         }
 
+        function kurangiBulan() {
+            const pin = prompt("Masukkan PIN ADMIN untuk mengedit tagihan:");
+            if(pin === ADMIN_PIN) {
+                const opsi = prompt("Ketik 'reset' untuk nol-kan, atau ketik 'kurang' untuk kurangi 1 bulan:");
+                if(opsi === 'reset') {
+                    bulanAktif = 0;
+                } else if(opsi === 'kurang' && bulanAktif > 0) {
+                    bulanAktif--;
+                }
+                localStorage.setItem('bulanAktif', bulanAktif);
+                updateUI();
+            } else if (pin !== null) {
+                alert("PIN SALAH!");
+            }
+        }
+
         function updateUI() {
             let mTotal = 0, kTotal = 0, mBulanIni = 0, kBulanIni = 0;
             const sekarang = new Date();
             const saldoTrend = [];
+            const pengeluaranKategori = { "Sosial": 0, "Alat Kelas": 0, "Lainnya": 0 };
 
             dataLokal.forEach(r => {
-                if (!r[3] || !r[4]) return; // Proteksi baris rusak/kosong
-
+                if (!r[3] || !r[4]) return;
                 const tgl = new Date(r[0]);
                 const jml = parseInt(r[3]) || 0;
                 
-                if(r[4] === 'Masuk') mTotal += jml; else kTotal += jml;
-                
-                if(!isNaN(tgl.getTime())) {
-                    if(tgl.getMonth() === sekarang.getMonth() && tgl.getFullYear() === sekarang.getFullYear()) {
-                        if(r[4] === 'Masuk') mBulanIni += jml; else kBulanIni += jml;
-                    }
+                if(r[4] === 'Masuk') {
+                    mTotal += jml;
+                } else {
+                    kTotal += jml;
+                    if(r[2].includes("[Sosial]")) pengeluaranKategori["Sosial"] += jml;
+                    else if(r[2].includes("[Alat Kelas]")) pengeluaranKategori["Alat Kelas"] += jml;
+                    else pengeluaranKategori["Lainnya"] += jml;
+                }
+
+                if(!isNaN(tgl.getTime()) && tgl.getMonth() === sekarang.getMonth() && tgl.getFullYear() === sekarang.getFullYear()) {
+                    if(r[4] === 'Masuk') mBulanIni += jml; else kBulanIni += jml;
                 }
                 saldoTrend.push(mTotal - kTotal);
             });
 
-            // LOGIKA PIUTANG PER SISWA
+            document.getElementById('ringkasanKategori').innerHTML = Object.entries(pengeluaranKategori).map(([kat, total]) => `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">${kat}</span>
+                    <span class="text-xs font-black text-red-500">Rp ${total.toLocaleString('id-ID')}</span>
+                </div>
+            `).join('');
+
             const targetTotalPerSiswa = bulanAktif * NOMINAL_IURAN;
             let totalPiutang = 0;
 
             listSiswa.forEach(nama => {
-                const bayar = dataLokal
-                    .filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]"))
-                    .reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
+                const bayar = dataLokal.filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]")).reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
                 if(bayar < targetTotalPerSiswa) totalPiutang += (targetTotalPerSiswa - bayar);
             });
 
@@ -227,7 +276,6 @@
             document.getElementById('mBulanIni').innerText = "+" + mBulanIni.toLocaleString('id-ID');
             document.getElementById('kBulanIni').innerText = "-" + kBulanIni.toLocaleString('id-ID');
             document.getElementById('infoBulan').innerText = `TAGIHAN: ${bulanAktif} BULAN`;
-            
             renderTabel();
             renderMiniChart(saldoTrend.slice(-10));
         }
@@ -235,131 +283,158 @@
         function renderTabel() {
             const body = document.getElementById('tabelBody');
             body.innerHTML = dataLokal.slice().reverse().map((r, i) => {
-                if (!r[3]) return '';
                 const realIndex = dataLokal.length - 1 - i;
+                const isMasuk = r[4] === 'Masuk';
+                const rowBg = isMasuk ? 'bg-green-50/50' : 'bg-red-50/50';
                 const tgl = isNaN(new Date(r[0]).getTime()) ? 'Baru' : new Date(r[0]).toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
+                
                 return `
-                <tr class="border-b border-slate-50 hover:bg-slate-100 transition">
-                    <td class="py-4">
+                <tr class="${rowBg} border-b border-white hover:opacity-80 transition">
+                    <td class="py-4 px-2">
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-slate-400 uppercase">${tgl}</span>
-                            <span class="font-black uppercase text-slate-700 text-sm">${r[1] || 'Anonim'}</span>
+                            <span class="font-black uppercase text-slate-700 text-xs">${r[1] || 'Anonim'}</span>
                             <span class="text-[9px] text-slate-400 italic">${r[2] || '-'}</span>
                         </div>
                     </td>
-                    <td class="text-right font-black ${r[4]==='Masuk'?'text-green-600':'text-red-600'} text-sm">
-                        ${r[4]==='Masuk'?'+':'-'} ${parseInt(r[3]).toLocaleString('id-ID')}
+                    <td class="text-right font-black ${isMasuk?'text-green-600':'text-red-600'} text-xs">
+                        ${isMasuk?'+':'-'} ${parseInt(r[3]).toLocaleString('id-ID')}
                     </td>
-                    <td class="text-right pl-4">
-                        <button onclick="hapusData(${realIndex})" class="w-8 h-8 rounded-full text-slate-200 hover:text-red-500 transition">✕</button>
+                    <td class="text-right pl-2">
+                        <button onclick="hapusData(${realIndex})" class="w-8 h-8 rounded-full text-slate-300 hover:text-red-500 transition">✕</button>
                     </td>
                 </tr>`;
             }).join('');
         }
 
-        function bukaLaporanSiswa() {
-            const modal = document.getElementById('modalLaporan');
-            const tbody = document.getElementById('tabelLaporanSiswa');
-            const target = bulanAktif * NOMINAL_IURAN;
+        // FITUR BARU: EKSPOR KE EXCEL (CSV)
+        function unduhCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Tanggal,Nama,Keterangan,Jumlah,Tipe\n";
             
-            document.getElementById('targetIndividuText').innerText = "Rp " + target.toLocaleString('id-ID');
-            tbody.innerHTML = "";
-
-            listSiswa.forEach(nama => {
-                const bayar = dataLokal
-                    .filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]"))
-                    .reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
-                
-                const sisa = Math.max(0, target - bayar);
-                const bg = sisa <= 0 ? 'bg-green-50' : 'bg-white';
-                
-                tbody.innerHTML += `
-                    <tr class="${bg}">
-                        <td class="p-4 font-black uppercase text-xs">${nama}</td>
-                        <td class="p-4 text-xs font-bold text-slate-500">Rp ${bayar.toLocaleString('id-ID')}</td>
-                        <td class="p-4 text-right font-black text-xs ${sisa <= 0 ? 'text-green-600' : 'text-red-500'}">
-                            ${sisa <= 0 ? 'LUNAS' : 'Rp ' + sisa.toLocaleString('id-ID')}
-                        </td>
-                    </tr>
-                `;
+            dataLokal.forEach(r => {
+                const tgl = new Date(r[0]).toLocaleDateString('id-ID');
+                const row = [tgl, r[1], r[2], r[3], r[4]].join(",");
+                csvContent += row + "\n";
             });
-            modal.classList.remove('hidden');
-        }
 
-        function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
-
-        async function hapusData(index) {
-            const pin = prompt("Konfirmasi Hapus: Masukkan PIN ADMIN:");
-            if(pin !== ADMIN_PIN) return alert("PIN SALAH!");
-            
-            if(confirm("Yakin ingin menghapus riwayat ini?")) {
-                try {
-                    await fetch(scriptURL, { method: 'POST', body: JSON.stringify({action: 'delete', row: index}) });
-                    muatData();
-                } catch (e) { alert("Gagal menghapus!"); }
-            }
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Kas_X3_${new Date().toLocaleDateString('id-ID')}.csv`);
+            document.body.appendChild(link);
+            link.click();
         }
 
         document.getElementById('kasForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if(document.getElementById('inputPin').value !== ADMIN_PIN) return alert("PIN ADMIN SALAH!");
             
-            const btn = document.getElementById('btnSimpan');
-            btn.innerText = "PROSES...";
-            btn.disabled = true;
+            // VALIDASI NAMA SISWA
+            const inputNama = document.getElementById('nama').value.trim().toUpperCase();
+            if (!listSiswa.includes(inputNama)) {
+                alert("⚠️ NAMA SISWA TIDAK TERDAFTAR!\nSilakan pilih nama dari daftar yang tersedia.");
+                return;
+            }
 
-            const payload = {
-                nama: document.getElementById('nama').value,
-                keterangan: `[${document.getElementById('kategori').value}] ${document.getElementById('keterangan').value}`,
-                jumlah: document.getElementById('jumlah').value,
-                tipe: document.getElementById('tipe').value
+            if(document.getElementById('inputPin').value !== ADMIN_PIN) {
+                alert("PIN ADMIN SALAH!");
+                return;
+            }
+
+            const btn = document.getElementById('btnSimpan');
+            btn.innerText = "PROSES..."; btn.disabled = true;
+            
+            const payload = { 
+                nama: inputNama, 
+                keterangan: `[${document.getElementById('kategori').value}] ${document.getElementById('keterangan').value}`, 
+                jumlah: document.getElementById('jumlah').value, 
+                tipe: document.getElementById('tipe').value 
             };
 
             try {
                 await fetch(scriptURL, { method: 'POST', body: JSON.stringify(payload) });
                 document.getElementById('kasForm').reset();
                 muatData();
-            } catch (e) { alert("Gagal menyimpan!"); }
-            finally { 
-                btn.innerText = "Simpan Data"; 
-                btn.disabled = false;
+            } catch (e) { 
+                alert("Gagal Menyimpan Data."); 
+            } finally { 
+                btn.innerText = "Simpan Data"; btn.disabled = false; 
             }
         });
+
+        function bukaLaporanSiswa() {
+            const target = bulanAktif * NOMINAL_IURAN;
+            document.getElementById('labelTagihan').innerText = bulanAktif;
+            const tbody = document.getElementById('tabelLaporanSiswa');
+            tbody.innerHTML = "";
+
+            listSiswa.forEach(nama => {
+                const bayar = dataLokal.filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]")).reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
+                const sisa = Math.max(0, target - bayar);
+                const bg = sisa <= 0 ? 'bg-green-50' : 'bg-white';
+                tbody.innerHTML += `
+                <tr class="${bg}">
+                    <td class="p-4 font-black uppercase text-xs">${nama}</td>
+                    <td class="p-4 text-xs font-bold text-slate-500">Rp ${bayar.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-right font-black text-xs ${sisa <= 0 ? 'text-green-600' : 'text-red-500'}">
+                        ${sisa <= 0 ? 'LUNAS' : 'Rp ' + sisa.toLocaleString('id-ID')}
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('modalLaporan').classList.remove('hidden');
+        }
+
+        function copyPenunggak() {
+            const target = bulanAktif * NOMINAL_IURAN;
+            const daftarBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const sekarang = new Date();
+            const bulanTahunTxt = `${daftarBulan[sekarang.getMonth()]} ${sekarang.getFullYear()}`;
+            
+            let teks = `*DAFTAR PENUNGGAK KAS X-3*\n_Uang Kas Bulan ${bulanTahunTxt}_\n\n`;
+            let counter = 1;
+            
+            listSiswa.forEach((nama) => {
+                const bayar = dataLokal.filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]")).reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
+                const sisa = target - bayar;
+                if (sisa > 0) {
+                    teks += `${counter}. *${nama.toUpperCase()}* - Kurang: Rp ${sisa.toLocaleString('id-ID')}\n`;
+                    counter++;
+                }
+            });
+
+            if (counter === 1) teks += "✅ Semua siswa sudah Lunas!";
+            else teks += `\nTotal piutang kelas: *${document.getElementById('sisaPiutang').innerText}*`;
+
+            navigator.clipboard.writeText(teks).then(() => alert("Daftar disalin ke Clipboard!"));
+        }
+
+        function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
+
+        async function hapusData(index) {
+            const pin = prompt("Masukkan PIN ADMIN untuk menghapus:");
+            if(pin === ADMIN_PIN) {
+                if(confirm("Hapus transaksi ini?")) {
+                    try {
+                        await fetch(scriptURL, { method: 'POST', body: JSON.stringify({action: 'delete', row: index}) });
+                        muatData();
+                    } catch (e) { alert("Gagal Menghapus."); }
+                }
+            } else if (pin !== null) { alert("PIN SALAH!"); }
+        }
 
         function renderMiniChart(data) {
             const ctx = document.getElementById('miniChart').getContext('2d');
             if(myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map((_, i) => i),
-                    datasets: [{
-                        data: data,
-                        borderColor: '#2563eb',
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)'
-                    }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: { x: { display: false }, y: { display: false } }
-                }
-            });
+            myChart = new Chart(ctx, { type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: '#2563eb', borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: 'rgba(37, 99, 235, 0.1)' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } } });
         }
 
         function unduhPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            const now = new Date();
             doc.text("LAPORAN KAS KELAS X-3", 14, 15);
-            doc.autoTable({
-                startY: 25,
-                head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']],
-                body: dataLokal.map(r => [new Date(r[0]).toLocaleDateString(), r[1], r[2], r[3], r[4]])
-            });
-            doc.save("Laporan_Kas_X3.pdf");
+            doc.autoTable({ startY: 25, head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']], body: dataLokal.map(r => [new Date(r[0]).toLocaleDateString('id-ID'), r[1], r[2], r[3], r[4]]) });
+            doc.save(`Laporan_Kas_X3_${now.toLocaleDateString()}.pdf`);
         }
 
         muatData();
