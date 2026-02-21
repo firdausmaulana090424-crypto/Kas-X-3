@@ -45,12 +45,12 @@
                 <div>
                     <h1 class="text-3xl font-black italic uppercase leading-none">UANG KAS <span class="text-blue-600">KELAS X-3</span></h1>
                     <p id="realtimeClock" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic"></p>
-                    <p id="infoBulan" class="text-[9px] font-bold text-blue-400 uppercase tracking-widest mt-0.5 italic">Sinkronisasi...</p>
+                    <p id="infoBulan" class="text-[9px] font-bold text-blue-400 uppercase tracking-widest mt-0.5 italic">Menghubungkan...</p>
                 </div>
             </div>
 
             <div class="flex gap-2 items-center">
-                <button onclick="kurangiBulan()" class="p-3 bg-white text-red-500 rounded-2xl shadow-sm border hover:bg-red-50 transition text-[10px] font-bold uppercase italic">➖ Kurangi</button>
+                <button onclick="kurangiBulan()" class="p-3 bg-white text-red-500 rounded-2xl shadow-sm border hover:bg-red-50 transition text-[10px] font-bold uppercase italic">➖ Edit Tagihan</button>
                 <div class="bg-white p-3 rounded-2xl shadow-sm border flex items-center gap-3">
                     <div class="text-right">
                         <p class="text-[9px] font-black text-slate-400 uppercase">Tambah Tagihan</p>
@@ -77,7 +77,7 @@
             <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm flex flex-col justify-center">
                 <p class="text-[10px] font-black uppercase text-slate-400 italic">Piutang Kelas</p>
                 <h2 id="sisaPiutang" class="text-3xl font-black text-red-500">Rp 0</h2>
-                <p class="text-[9px] mt-1 text-slate-400 font-bold">*Berdasarkan bulan aktif</p>
+                <p class="text-[9px] mt-1 text-slate-400 font-bold">*Sinkron Seluruh Perangkat</p>
             </div>
             <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm flex items-center justify-center">
                 <canvas id="miniChart" class="max-h-20"></canvas>
@@ -173,13 +173,12 @@
     </div>
 
     <script>
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbw5bKSsf6LiD2d_QkAHjC-E1VhJgD9qTsZtA0A8fZLDKE00r4fCfz-e-gZhw6_-iXua/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbw9HX9zRlkd7FUXJfAjOpN8mn4Xn6FuwoaWekoAgkXMUsWBXeZ6abtSkxeJe6bQH0Th/exec';
         const ADMIN_PIN = "0101";
         const NOMINAL_IURAN = 10000;
         
         let dataLokal = [], listSiswa = [], myChart;
-        // ANTI-REFRESH: Mengambil data bulanAktif dari localStorage
-        let bulanAktif = localStorage.getItem('bulanAktif') ? parseInt(localStorage.getItem('bulanAktif')) : 0;
+        let bulanAktif = 0; // Sekarang mengambil dari Cloud via muatData()
 
         function updateRealtimeClock() {
             const now = new Date();
@@ -195,8 +194,12 @@
                 const res = await fetch(scriptURL);
                 if (!res.ok) throw new Error();
                 const json = await res.json();
+                
                 dataLokal = json.transaksi || [];
                 listSiswa = json.anggota || [];
+                // Ambil bulanAktif dari database cloud
+                bulanAktif = parseInt(json.bulanAktif) || 0;
+                
                 document.getElementById('listAnggota').innerHTML = listSiswa.map(n => `<option value="${n}">`).join('');
                 updateUI();
             } catch (e) {
@@ -205,26 +208,41 @@
             }
         }
 
-        function toggleIuran() {
-            if(confirm("Tambah kewajiban iuran 1 bulan untuk semua siswa?")) {
-                bulanAktif++;
-                localStorage.setItem('bulanAktif', bulanAktif);
+        // FUNGSI BARU: Simpan status bulan ke Google Sheets agar sinkron semua perangkat
+        async function sinkronBulanKeCloud(nilaiBaru) {
+            document.getElementById('infoBulan').innerText = "MENYIMPAN...";
+            try {
+                await fetch(scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "updateBulan", nilai: nilaiBaru })
+                });
+                muatData(); // Refresh tampilan setelah update cloud
+            } catch (e) {
+                alert("Gagal sinkronisasi bulan ke cloud!");
             }
-            updateUI();
+        }
+
+        async function toggleIuran() {
+            if(confirm("Tambah kewajiban iuran 1 bulan untuk SEMUA perangkat?")) {
+                await sinkronBulanKeCloud(bulanAktif + 1);
+            }
             setTimeout(() => { document.getElementById('btnSaklar').checked = false; }, 500);
         }
 
-        function kurangiBulan() {
-            const pin = prompt("Masukkan PIN ADMIN untuk mengedit tagihan:");
+        async function kurangiBulan() {
+            const pin = prompt("Masukkan PIN ADMIN untuk mengedit tagihan (Semua Perangkat):");
             if(pin === ADMIN_PIN) {
                 const opsi = prompt("Ketik 'reset' untuk nol-kan, atau ketik 'kurang' untuk kurangi 1 bulan:");
+                let nilaiBaru = bulanAktif;
                 if(opsi === 'reset') {
-                    bulanAktif = 0;
+                    nilaiBaru = 0;
                 } else if(opsi === 'kurang' && bulanAktif > 0) {
-                    bulanAktif--;
+                    nilaiBaru--;
                 }
-                localStorage.setItem('bulanAktif', bulanAktif);
-                updateUI();
+                
+                if (nilaiBaru !== bulanAktif || opsi === 'reset') {
+                    await sinkronBulanKeCloud(nilaiBaru);
+                }
             } else if (pin !== null) {
                 alert("PIN SALAH!");
             }
@@ -307,17 +325,14 @@
             }).join('');
         }
 
-        // FITUR BARU: EKSPOR KE EXCEL (CSV)
         function unduhCSV() {
             let csvContent = "data:text/csv;charset=utf-8,";
             csvContent += "Tanggal,Nama,Keterangan,Jumlah,Tipe\n";
-            
             dataLokal.forEach(r => {
                 const tgl = new Date(r[0]).toLocaleDateString('id-ID');
                 const row = [tgl, r[1], r[2], r[3], r[4]].join(",");
                 csvContent += row + "\n";
             });
-
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
@@ -328,38 +343,29 @@
 
         document.getElementById('kasForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            // VALIDASI NAMA SISWA
             const inputNama = document.getElementById('nama').value.trim().toUpperCase();
             if (!listSiswa.includes(inputNama)) {
-                alert("⚠️ NAMA SISWA TIDAK TERDAFTAR!\nSilakan pilih nama dari daftar yang tersedia.");
+                alert("⚠️ NAMA SISWA TIDAK TERDAFTAR!");
                 return;
             }
-
             if(document.getElementById('inputPin').value !== ADMIN_PIN) {
                 alert("PIN ADMIN SALAH!");
                 return;
             }
-
             const btn = document.getElementById('btnSimpan');
             btn.innerText = "PROSES..."; btn.disabled = true;
-            
             const payload = { 
                 nama: inputNama, 
                 keterangan: `[${document.getElementById('kategori').value}] ${document.getElementById('keterangan').value}`, 
                 jumlah: document.getElementById('jumlah').value, 
                 tipe: document.getElementById('tipe').value 
             };
-
             try {
                 await fetch(scriptURL, { method: 'POST', body: JSON.stringify(payload) });
                 document.getElementById('kasForm').reset();
                 muatData();
-            } catch (e) { 
-                alert("Gagal Menyimpan Data."); 
-            } finally { 
-                btn.innerText = "Simpan Data"; btn.disabled = false; 
-            }
+            } catch (e) { alert("Gagal!"); } 
+            finally { btn.innerText = "Simpan Data"; btn.disabled = false; }
         });
 
         function bukaLaporanSiswa() {
@@ -367,19 +373,11 @@
             document.getElementById('labelTagihan').innerText = bulanAktif;
             const tbody = document.getElementById('tabelLaporanSiswa');
             tbody.innerHTML = "";
-
             listSiswa.forEach(nama => {
                 const bayar = dataLokal.filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]")).reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
                 const sisa = Math.max(0, target - bayar);
                 const bg = sisa <= 0 ? 'bg-green-50' : 'bg-white';
-                tbody.innerHTML += `
-                <tr class="${bg}">
-                    <td class="p-4 font-black uppercase text-xs">${nama}</td>
-                    <td class="p-4 text-xs font-bold text-slate-500">Rp ${bayar.toLocaleString('id-ID')}</td>
-                    <td class="p-4 text-right font-black text-xs ${sisa <= 0 ? 'text-green-600' : 'text-red-500'}">
-                        ${sisa <= 0 ? 'LUNAS' : 'Rp ' + sisa.toLocaleString('id-ID')}
-                    </td>
-                </tr>`;
+                tbody.innerHTML += `<tr class="${bg}"><td class="p-4 font-black uppercase text-xs">${nama}</td><td class="p-4 text-xs font-bold text-slate-500">Rp ${bayar.toLocaleString('id-ID')}</td><td class="p-4 text-right font-black text-xs ${sisa <= 0 ? 'text-green-600' : 'text-red-500'}">${sisa <= 0 ? 'LUNAS' : 'Rp ' + sisa.toLocaleString('id-ID')}</td></tr>`;
             });
             document.getElementById('modalLaporan').classList.remove('hidden');
         }
@@ -388,11 +386,8 @@
             const target = bulanAktif * NOMINAL_IURAN;
             const daftarBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
             const sekarang = new Date();
-            const bulanTahunTxt = `${daftarBulan[sekarang.getMonth()]} ${sekarang.getFullYear()}`;
-            
-            let teks = `*DAFTAR PENUNGGAK KAS X-3*\n_Uang Kas Bulan ${bulanTahunTxt}_\n\n`;
+            let teks = `*DAFTAR PENUNGGAK KAS X-3*\n_Update: ${sekarang.toLocaleDateString('id-ID')}_\n\n`;
             let counter = 1;
-            
             listSiswa.forEach((nama) => {
                 const bayar = dataLokal.filter(t => t[1] && t[1].toLowerCase() === nama.toLowerCase() && t[4] === 'Masuk' && t[2] && t[2].includes("[Iuran]")).reduce((acc, t) => acc + (parseInt(t[3]) || 0), 0);
                 const sisa = target - bayar;
@@ -401,23 +396,21 @@
                     counter++;
                 }
             });
-
             if (counter === 1) teks += "✅ Semua siswa sudah Lunas!";
             else teks += `\nTotal piutang kelas: *${document.getElementById('sisaPiutang').innerText}*`;
-
-            navigator.clipboard.writeText(teks).then(() => alert("Daftar disalin ke Clipboard!"));
+            navigator.clipboard.writeText(teks).then(() => alert("Daftar disalin!"));
         }
 
         function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
 
         async function hapusData(index) {
-            const pin = prompt("Masukkan PIN ADMIN untuk menghapus:");
+            const pin = prompt("PIN ADMIN:");
             if(pin === ADMIN_PIN) {
                 if(confirm("Hapus transaksi ini?")) {
                     try {
                         await fetch(scriptURL, { method: 'POST', body: JSON.stringify({action: 'delete', row: index}) });
                         muatData();
-                    } catch (e) { alert("Gagal Menghapus."); }
+                    } catch (e) { alert("Gagal!"); }
                 }
             } else if (pin !== null) { alert("PIN SALAH!"); }
         }
@@ -431,10 +424,9 @@
         function unduhPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const now = new Date();
             doc.text("LAPORAN KAS KELAS X-3", 14, 15);
             doc.autoTable({ startY: 25, head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']], body: dataLokal.map(r => [new Date(r[0]).toLocaleDateString('id-ID'), r[1], r[2], r[3], r[4]]) });
-            doc.save(`Laporan_Kas_X3_${now.toLocaleDateString()}.pdf`);
+            doc.save(`Laporan_Kas_X3.pdf`);
         }
 
         muatData();
