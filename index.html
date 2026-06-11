@@ -17,7 +17,7 @@
         { "src": "logo.jpg", "sizes": "512x512", "type": "image/jpeg" }
       ]
     }'>
-    <link rel="apple-touch-icon" href="logo.jpg">
+    <link class="flex" rel="apple-touch-icon" href="logo.jpg">
     <link rel="icon" type="image/jpeg" href="logo.jpg">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -211,7 +211,6 @@
             } catch (e) { document.getElementById('infoBulan').innerText = "OFFLINE"; }
         }
 
-        // --- FUNGSI EDIT TAGIHAN (UPDATE CLOUD) ---
         async function sinkronBulanKeCloud(nilaiBaru) {
             document.getElementById('infoBulan').innerText = "MENYIMPAN...";
             try {
@@ -226,7 +225,7 @@
         async function kurangiBulan() {
             const pin = prompt("PIN ADMIN:");
             if(pin === ADMIN_PIN) {
-                const perintah = prompt("Ketik 'KURANG' untuk -1 bulan, atau 'RESET' untuk nol kan semua:");
+                const perintah = prompt("Ketik 'KURANG' untuk -1 bulan, or 'RESET' untuk nol kan semua:");
                 if(!perintah) return;
                 
                 let baru = bulanAktif;
@@ -249,7 +248,6 @@
             document.getElementById('btnSaklar').checked = false; 
         }
 
-        // LOGIKA BAYAR SEKALIGUS
         document.getElementById('jumlahBulanBayar').addEventListener('change', function() {
             const jml = parseInt(this.value);
             if(document.getElementById('kategori').value === "Iuran" && document.getElementById('tipe').value === "Masuk") {
@@ -258,6 +256,7 @@
             }
         });
 
+        // --- SISTEM INPUT BARU: ANTI MELOMPAT DAN MENCARI SEL KOSONG ---
         document.getElementById('kasForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const pin = document.getElementById('inputPin').value;
@@ -278,8 +277,26 @@
                 tipe: document.getElementById('tipe').value 
             };
 
+            // Cari baris kosong pertama di dalam array data lokal (mulai dari baris ke-2)
+            let barisKosong = 2; 
+            for (let i = 0; i < dataLokal.length; i++) {
+                // Jika mendeteksi baris yang tanggalnya kosong, gunakan baris tersebut
+                if (!dataLokal[i][0] || dataLokal[i][0].toString().trim() === "") {
+                    barisKosong = i + 2;
+                    break;
+                }
+                // Jika tidak ada yang kosong sama sekali hingga akhir baris transaksi, taruh di bawahnya
+                if (i === dataLokal.length - 1) {
+                    barisKosong = dataLokal.length + 2;
+                }
+            }
+
             try {
-                await fetch(scriptURL, { method: 'POST', body: JSON.stringify(payload) });
+                // Kirim data dengan instruksi "insertAt" agar backend menulis di kolom A-E baris target
+                await fetch(scriptURL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ ...payload, action: "insertAt", targetRow: barisKosong }) 
+                });
                 document.getElementById('nama').value = "";
                 document.getElementById('keterangan').value = "";
                 document.getElementById('jumlah').value = "";
@@ -295,6 +312,8 @@
             const pengeluaranKategori = { "Sosial": 0, "Alat Kelas": 0, "Lainnya": 0 };
 
             dataLokal.forEach(r => {
+                if (!r[0] || r[0].toString().trim() === "") return; // Abaikan baris kosong saat menghitung total saldo
+
                 const tgl = new Date(r[0]);
                 const jml = parseInt(r[3]) || 0;
                 const tipe = r[4];
@@ -337,11 +356,15 @@
 
         function renderTabel() {
             const body = document.getElementById('tabelBody');
-            body.innerHTML = dataLokal.slice().reverse().map((r, idx) => {
-                const realIdx = dataLokal.length - 1 - idx;
+            
+            // Menyaring data: baris kosong yang tidak ada Nama dan Jumlah tidak akan dimasukkan ke riwayat web
+            const dataValid = dataLokal.filter(r => r[1] && r[3] && r[1].toString().trim() !== "");
+
+            body.innerHTML = dataValid.slice().reverse().map((r, idx) => {
+                const realIdx = dataLokal.findIndex(originalRow => originalRow === r);
                 return `<tr class="border-b text-xs">
                     <td class="py-3"><b>${r[1]}</b><br><small class="text-slate-400">${r[2]}</small></td>
-                    <td class="text-right font-bold ${r[4] === 'Masuk' ? 'text-green-600' : 'text-red-600'}">Rp ${parseInt(r[3]).toLocaleString()}</td>
+                    <td class="text-right font-bold ${r[4] === 'Masuk' ? 'text-green-600' : 'text-red-600'}">Rp ${parseInt(r[3]).toLocaleString('id-ID')}</td>
                     <td class="text-right"><button onclick="hapusData(${realIdx})" class="text-slate-300 hover:text-red-500">✕</button></td>
                 </tr>`;
             }).join('');
@@ -391,7 +414,7 @@
             doc.text("Laporan Transaksi Kas X-3", 14, 15);
             doc.autoTable({
                 head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']],
-                body: dataLokal.map(r => [r[0], r[1], r[2], r[3], r[4]]),
+                body: dataLokal.filter(r => r[0] && r[1]).map(r => [r[0], r[1], r[2], r[3], r[4]]),
                 startY: 20
             });
             doc.save("Laporan_Kas_X3.pdf");
