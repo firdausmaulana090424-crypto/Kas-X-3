@@ -208,7 +208,7 @@
                 bulanAktif = parseInt(json.bulanAktif) || 0;
                 document.getElementById('listAnggota').innerHTML = listSiswa.map(n => `<option value="${n}">`).join('');
                 updateUI();
-                sesuaikanFormOtomatis(); // Supaya nominal default langsung terisi Rp 10.000 saat web terbuka
+                sesuaikanFormOtomatis();
             } catch (e) { document.getElementById('infoBulan').innerText = "OFFLINE"; }
         }
 
@@ -249,7 +249,6 @@
             document.getElementById('btnSaklar').checked = false; 
         }
 
-        // Fungsi penyempurnaan pengisian otomatis form input
         function sesuaikanFormOtomatis() {
             const jmlBulan = parseInt(document.getElementById('jumlahBulanBayar').value) || 1;
             const kategori = document.getElementById('kategori').value;
@@ -262,7 +261,6 @@
                 document.getElementById('keterangan').value = `Bayar kas untuk ${jmlBulan} bulan`;
             } else {
                 boxBulan.style.display = "none";
-                // Jangan reset keterangan & jumlah jika user sedang mengetik kategori non-iuran
                 if (kategori !== "Iuran") {
                     if(document.getElementById('keterangan').value.startsWith("Bayar kas")) {
                         document.getElementById('keterangan').value = "";
@@ -292,6 +290,7 @@
                 tipe: document.getElementById('tipe').value 
             };
 
+            // PERBAIKAN: Fokus deteksi baris kosong hanya pada Kolom A (Tanggal) untuk menangkal data melompat
             let barisKosong = 2; 
             for (let i = 0; i < dataLokal.length; i++) {
                 if (!dataLokal[i][0] || dataLokal[i][0].toString().trim() === "") {
@@ -355,19 +354,17 @@
             let piutang = 0;
             
             listSiswa.forEach(n => {
-                // PENYEMPURNAAN: Ditambahkan '|| 0' untuk menangkal error Rp NaN
                 const bayar = dataLokal.filter(t => t[1] && t[1].toString().trim() === n && t[4] === 'Masuk' && t[2].includes("[Iuran]")).reduce((a, b) => a + (parseInt(b[3]) || 0), 0);
                 if(bayar < target) piutang += (target - bayar);
             });
 
             document.getElementById('totalSaldo').innerText = "Rp " + (mTotal - kTotal).toLocaleString('id-ID');
             document.getElementById('sisaPiutang').innerText = "Rp " + piutang.toLocaleString('id-ID');
-            document.getElementById('mBulanIni').innerText = "+" + mBulanIni.toLocaleString();
-            document.getElementById('kBulanIni').innerText = "-" + kBulanIni.toLocaleString();
+            document.getElementById('mBulanIni').innerText = "+" + mBulanIni.toLocaleString('id-ID');
+            document.getElementById('kBulanIni').innerText = "-" + kBulanIni.toLocaleString('id-ID');
             document.getElementById('infoBulan').innerText = `TAGIHAN: ${bulanAktif} BULAN`;
 
             renderTabel();
-            // PROTEKSI CHART: Jika data kosong, kirim array default [0] agar tidak crash
             renderMiniChart(saldoTrend.length > 0 ? saldoTrend.slice(-10) : [0]);
         }
 
@@ -411,21 +408,30 @@
             document.getElementById('tabelLaporanSiswa').innerHTML = listSiswa.map(n => {
                 const bayar = dataLokal.filter(t => t[1] && t[1].toString().trim() === n && t[4] === 'Masuk' && t[2].includes("[Iuran]")).reduce((a, b) => a + (parseInt(b[3]) || 0), 0);
                 const sisa = Math.max(0, target - bayar);
-                return `<tr class="border-b text-xs"><td class="p-3">${n}</td><td class="p-3">Rp ${bayar.toLocaleString()}</td><td class="p-3 text-right font-bold ${sisa > 0 ? 'text-red-500' : 'text-green-600'}">${sisa > 0 ? 'Rp ' + sisa.toLocaleString() : 'LUNAS'}</td></tr>`;
+                return `<tr class="border-b text-xs"><td class="p-3">${n}</td><td class="p-3">Rp ${bayar.toLocaleString('id-ID')}</td><td class="p-3 text-right font-bold ${sisa > 0 ? 'text-red-500' : 'text-green-600'}">${sisa > 0 ? 'Rp ' + sisa.toLocaleString('id-ID') : 'LUNAS'}</td></tr>`;
             }).join('');
             document.getElementById('modalLaporan').classList.remove('hidden');
         }
 
         function copyPenunggak() {
             const target = bulanAktif * NOMINAL_IURAN;
-            // PERBAIKAN: Judul pesan WhatsApp diganti otomatis menjadi KAS ASTRAVELIS
-            let teks = "*PENUNGGAK KAS ASTRAVELIS*\n";
+            // PERBAIKAN: Optimalisasi teks WhatsApp dengan emoji & format pemisah ribuan agar interaktif
+            let teks = "*📢 PENGINGAT TUNGGAKAN KAS ASTRAVELIS 📢*\n\n";
+            let adaPenunggak = false;
+            
             listSiswa.forEach(n => {
                 const bayar = dataLokal.filter(t => t[1] && t[1].toString().trim() === n && t[4] === 'Masuk' && t[2].includes("[Iuran]")).reduce((a, b) => a + (parseInt(b[3]) || 0), 0);
-                if(target - bayar > 0) teks += `- ${n} (Rp ${(target - bayar).toLocaleString()})\n`;
+                const tunggakan = target - bayar;
+                if(tunggakan > 0) {
+                    teks += `🔹 *${n}* (Kurang: Rp ${tunggakan.toLocaleString('id-ID')})\n`;
+                    adaPenunggak = true;
+                }
             });
+            
+            if(!adaPenunggak) teks += "Alhamdulillah, semua siswa sudah melunasi kas kelas! 🎉";
+            
             navigator.clipboard.writeText(teks);
-            alert("Daftar penunggak Kas Astravelis disalin!");
+            alert("Daftar penunggak Kas Astravelis disalin ke clipboard!");
         }
 
         function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
@@ -436,7 +442,11 @@
             doc.text("Laporan Kas Astravelis", 14, 15);
             doc.autoTable({
                 head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']],
-                body: dataLokal.filter(r => r[0] && r[1]).map(r => [r[0], r[1], r[2], r[3], r[4]]),
+                body: dataLokal.filter(r => r[0] && r[1]).map(r => {
+                    const formatTgl = r[0] ? new Date(r[0]).toLocaleDateString('id-ID') : '-';
+                    const nominal = parseInt(r[3]) ? "Rp " + parseInt(r[3]).toLocaleString('id-ID') : 'Rp 0';
+                    return [formatTgl, r[1], r[2], nominal, r[4]];
+                }),
                 startY: 20
             });
             doc.save("Laporan_Kas_Astravelis.pdf");
