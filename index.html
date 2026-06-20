@@ -435,18 +435,18 @@
         function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
         function unduhCSV() { window.open(scriptURL + "?action=export"); }
         
-        // MODIFIKASI TOTAL: Fitur Cetak PDF Modern dengan Kop Surat, Logo & Total Kalkulasi Komplet
+        // MODIFIKASI: Fitur Cetak PDF Modern dengan kolom Tanggal, Tipe, Nama, Keterangan, dan Jumlah
         function unduhPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
             
             const sekarang = new Date();
             const namaBulan = sekarang.toLocaleDateString('id-ID', { month: 'long' });
-            const tahun = Bird = sekarang.getFullYear();
+            const tahun = sekarang.getFullYear();
             const tglCetakFormat = sekarang.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             const jamCetakFormat = navigator.userAgent.includes("Mobi") 
                 ? sekarang.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-                : sekarang.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+                : Thermal = sekarang.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
 
             // Fungsi untuk membuat struktur halaman (Kop Surat & Judul)
             const buatKopSurat = () => {
@@ -493,7 +493,7 @@
             let totalMasuk = 0;
             let totalKeluar = 0;
             
-            // Susun baris isi tabel: Tanggal, Tipe, Keterangan, Jumlah (Sesuai Urutan Baru)
+            // Susun baris isi tabel sesuai permintaan baru: Tanggal, Tipe, Nama, Keterangan, Jumlah
             const rows = dataLokal.filter(r => r[0] && r[1]).map(r => {
                 const nominal = parseInt(r[3]) || 0;
                 const tipeFormat = r[4] === 'Masuk' ? 'Masuk' : 'Keluar';
@@ -501,20 +501,18 @@
                 if(r[4] === 'Masuk') totalMasuk += nominal;
                 else totalKeluar += nominal;
                 
-                // Teks gabungan pengidentifikasi transaksi nama + notes
-                const detailKeterangan = `[${r[1]}] ${r[2]}`;
-                
                 return [
-                    r[0], // Kolom 1: Tanggal
-                    tipeFormat, // Kolom 2: Tipe
-                    detailKeterangan, // Kolom 3: Keterangan / Keperluan
-                    `Rp ${nominal.toLocaleString('id-ID')}` // Kolom 4: Jumlah Nominal
+                    r[0],                                  // Kolom 1: Tanggal
+                    tipeFormat,                            // Kolom 2: Tipe
+                    r[1],                                  // Kolom 3: Nama (Dipisahkan dari keterangan)
+                    r[2],                                  // Kolom 4: Keterangan / Keperluan
+                    `Rp ${nominal.toLocaleString('id-ID')}` // Kolom 5: Jumlah Nominal
                 ];
             });
 
             // Pembuatan Struktur AutoTable Utama
             doc.autoTable({
-                head: [['Tanggal', 'Tipe', 'Keterangan / Keperluan', 'Jumlah']],
+                head: [['Tanggal', 'Tipe', 'Nama', 'Keterangan / Keperluan', 'Jumlah']],
                 body: rows,
                 startY: 40,
                 theme: 'striped',
@@ -533,7 +531,8 @@
                 },
                 columnStyles: {
                     1: { fontStyle: 'bold' },
-                    3: { halign: 'right', fontStyle: 'bold' } // Angka Jumlah rata kanan
+                    2: { fontStyle: 'bold' }, // Membuat kolom Nama tercetak tebal
+                    4: { halign: 'right', fontStyle: 'bold' } // Angka Jumlah rata kanan
                 },
                 didParseCell: function(data) {
                     // Mewarnai baris kata "Masuk" (Hijau) atau "Keluar" (Merah) di Kolom Tipe (Indeks ke-1)
