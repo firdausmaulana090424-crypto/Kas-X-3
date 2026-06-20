@@ -41,7 +41,7 @@
     <div class="max-w-6xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
             <div class="flex items-center gap-4">
-                <img src="logo.jpg" alt="Logo" class="h-14 w-14 object-contain rounded-2xl shadow-md border-2 border-white">
+                <img id="logoApp" src="logo.jpg" alt="Logo" class="h-14 w-14 object-contain rounded-2xl shadow-md border-2 border-white">
                 <div>
                     <h1 class="text-3xl font-black italic uppercase leading-none">KAS <span class="text-blue-600">ASTRAVELIS</span></h1>
                     <p id="realtimeClock" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 italic"></p>
@@ -290,7 +290,6 @@
                 tipe: document.getElementById('tipe').value 
             };
 
-            // PERBAIKAN: Fokus deteksi baris kosong hanya pada Kolom A (Tanggal) untuk menangkal data melompat
             let barisKosong = 2; 
             for (let i = 0; i < dataLokal.length; i++) {
                 if (!dataLokal[i][0] || dataLokal[i][0].toString().trim() === "") {
@@ -415,7 +414,6 @@
 
         function copyPenunggak() {
             const target = bulanAktif * NOMINAL_IURAN;
-            // PERBAIKAN: Optimalisasi teks WhatsApp dengan emoji & format pemisah ribuan agar interaktif
             let teks = "*📢 PENGINGAT TUNGGAKAN KAS ASTRAVELIS 📢*\n\n";
             let adaPenunggak = false;
             
@@ -436,20 +434,169 @@
 
         function tutupLaporan() { document.getElementById('modalLaporan').classList.add('hidden'); }
         function unduhCSV() { window.open(scriptURL + "?action=export"); }
+        
+        // MODIFIKASI TOTAL: Fitur Cetak PDF Modern dengan Kop Surat, Logo & Total Kalkulasi Komplet
         function unduhPDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Laporan Kas Astravelis", 14, 15);
-            doc.autoTable({
-                head: [['Tanggal', 'Nama', 'Keterangan', 'Jumlah', 'Tipe']],
-                body: dataLokal.filter(r => r[0] && r[1]).map(r => {
-                    const formatTgl = r[0] ? new Date(r[0]).toLocaleDateString('id-ID') : '-';
-                    const nominal = parseInt(r[3]) ? "Rp " + parseInt(r[3]).toLocaleString('id-ID') : 'Rp 0';
-                    return [formatTgl, r[1], r[2], nominal, r[4]];
-                }),
-                startY: 20
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            const sekarang = new Date();
+            const namaBulan = sekarang.toLocaleDateString('id-ID', { month: 'long' });
+            const tahun = Bird = sekarang.getFullYear();
+            const tglCetakFormat = sekarang.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const jamCetakFormat = navigator.userAgent.includes("Mobi") 
+                ? sekarang.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                : sekarang.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+
+            // Fungsi untuk membuat struktur halaman (Kop Surat & Judul)
+            const buatKopSurat = () => {
+                const imgLogo = document.getElementById('logoApp');
+                
+                try {
+                    // Ambil Logo secara dinamis dari elemen Gambar web lalu diubah ke format base64 aman jsPDF
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imgLogo.naturalWidth || 200;
+                    canvas.height = imgLogo.naturalHeight || 200;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(imgLogo, 0, 0);
+                    const base64Img = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Taruh Logo di sebelah kiri atas kop surat
+                    doc.addImage(base64Img, 'JPEG', 14, 10, 20, 20);
+                } catch(e) {
+                    console.log("Gagal memuat logo fisik, digantikan kotak representatif.");
+                }
+
+                // Teks Utama Kop Surat di sebelah kanan Logo
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor('#1a365d'); // Navy Gelap Astravelis
+                doc.setFontSize(22);
+                doc.text("LAPORAN KAS ASTRAVELIS", 38, 18);
+                
+                // Sub-info detail tanggal cetak dan periode bulan
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor('#64748b'); // Slate Gray
+                doc.text(`Kas Bulan: ${namaBulan} ${tahun}`, 38, 24);
+                doc.text(`Tanggal Cetak: ${tglCetakFormat} pukul ${jamCetakFormat}`, 38, 29);
+                
+                // Garis Tebal Estetik Pembatas Kop Surat (Warna Biru Khas)
+                doc.setDrawColor('#2563eb');
+                doc.setLineWidth(1.2);
+                doc.line(14, 34, 196, 34);
+            };
+
+            // Jalankan render kop surat di halaman pertama
+            buatKopSurat();
+
+            // Hitung kalkulasi total transaksi kas masuk dan keluar
+            let totalMasuk = 0;
+            let totalKeluar = 0;
+            
+            // Susun baris isi tabel: Tanggal, Tipe, Keterangan, Jumlah (Sesuai Urutan Baru)
+            const rows = dataLokal.filter(r => r[0] && r[1]).map(r => {
+                const nominal = parseInt(r[3]) || 0;
+                const tipeFormat = r[4] === 'Masuk' ? 'Masuk' : 'Keluar';
+                
+                if(r[4] === 'Masuk') totalMasuk += nominal;
+                else totalKeluar += nominal;
+                
+                // Teks gabungan pengidentifikasi transaksi nama + notes
+                const detailKeterangan = `[${r[1]}] ${r[2]}`;
+                
+                return [
+                    r[0], // Kolom 1: Tanggal
+                    tipeFormat, // Kolom 2: Tipe
+                    detailKeterangan, // Kolom 3: Keterangan / Keperluan
+                    `Rp ${nominal.toLocaleString('id-ID')}` // Kolom 4: Jumlah Nominal
+                ];
             });
-            doc.save("Laporan_Kas_Astravelis.pdf");
+
+            // Pembuatan Struktur AutoTable Utama
+            doc.autoTable({
+                head: [['Tanggal', 'Tipe', 'Keterangan / Keperluan', 'Jumlah']],
+                body: rows,
+                startY: 40,
+                theme: 'striped',
+                headStyles: {
+                    fillColor: '#2563eb', // Warna Biru Terang
+                    textColor: '#ffffff',
+                    font: "helvetica",
+                    fontStyle: "bold",
+                    fontSize: 10,
+                    halign: 'left'
+                },
+                bodyStyles: {
+                    font: "helvetica",
+                    fontSize: 9,
+                    textColor: '#334155'
+                },
+                columnStyles: {
+                    1: { fontStyle: 'bold' },
+                    3: { halign: 'right', fontStyle: 'bold' } // Angka Jumlah rata kanan
+                },
+                didParseCell: function(data) {
+                    // Mewarnai baris kata "Masuk" (Hijau) atau "Keluar" (Merah) di Kolom Tipe (Indeks ke-1)
+                    if (data.column.index === 1 && data.cell.section === 'body') {
+                        if (data.cell.text[0] === 'Masuk') {
+                            data.cell.styles.textColor = '#16a34a'; 
+                        } else if (data.cell.text[0] === 'Keluar') {
+                            data.cell.styles.textColor = '#dc2626';
+                        }
+                    }
+                },
+                // Otomatis tambahkan kop surat jika isi tabel berlanjut ke lembar halaman kedua
+                addPageContent: function(data) {
+                    if (doc.internal.getNumberOfPages() > 1) {
+                        buatKopSurat();
+                    }
+                }
+            });
+            
+            // Perhitungan koordinat posisi penempatan Summary Box di akhir tabel
+            const finalY = doc.lastAutoTable.finalY + 10;
+            const startX = 110; 
+            
+            // Validasi apakah sisa ruang halaman mencukupi, jika sempit otomatis dipindah ke halaman baru
+            if (finalY > 250) {
+                doc.addPage();
+                buatKopSurat();
+            }
+            
+            // Render Garis Pembatas Atas Summary Box
+            doc.setDrawColor('#cbd5e1');
+            doc.setLineWidth(0.5);
+            doc.line(startX, finalY, 196, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor('#334155');
+            
+            // Bagian Baris: Total Masuk
+            doc.setFont("helvetica", "bold");
+            doc.text("Total Masuk:", startX, finalY + 7);
+            doc.setTextColor('#16a34a'); // Hijau
+            doc.text(`Rp ${totalMasuk.toLocaleString('id-ID')}`, 196, finalY + 7, { align: 'right' });
+            
+            // Bagian Baris: Total Keluar
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor('#334155');
+            doc.text("Total Keluar:", startX, finalY + 14);
+            doc.setTextColor('#dc2626'); // Merah
+            doc.text(`Rp ${totalKeluar.toLocaleString('id-ID')}`, 196, finalY + 14, { align: 'right' });
+            
+            // Garis Pembatas Tengah
+            doc.setDrawColor('#cbd5e1');
+            doc.line(startX, finalY + 19, 196, finalY + 19);
+            
+            // Bagian Baris Akhir: Sisa Saldo Bersih Utama
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor('#1a365d'); // Navy Gelap
+            doc.text("Sisa Saldo Bersih:", startX, finalY + 26);
+            doc.text(`Rp ${(totalMasuk - totalKeluar).toLocaleString('id-ID')}`, 196, finalY + 26, { align: 'right' });
+            
+            // Eksekusi Download Penyimpanan File PDF
+            doc.save(`Laporan_Kas_Astravelis_${namaBulan}_${tahun}.pdf`);
         }
 
         muatData();
